@@ -4,7 +4,7 @@ import time
 import cv2
 import numpy as np
 
-from meerk40t.kernel import Modifier, console_command, console_argument, console_option
+from meerk40t.kernel import Modifier
 
 
 def plugin(kernel):
@@ -39,8 +39,8 @@ class CameraHub(Modifier):
         kernel = self.context._kernel
         _ = kernel.translation
 
-        @console_option('uri', 'u', type=str)
-        @console_command(kernel, 'camera\d*', regex=True, help="camera commands and modifiers.", chain=True)
+        @kernel.console_option('uri', 'u', type=str)
+        @kernel.console_command('camera\d*', regex=True, help="camera commands and modifiers.", chain=True)
         def camera(command, channel, _, uri=None, args=tuple(), **kwargs):
             if len(command) > 6:
                 self.current_camera = command[6:]
@@ -50,18 +50,18 @@ class CameraHub(Modifier):
                 cam.set_uri(uri)
             return cam
 
-        @console_command(kernel, 'start', data_type=Camera, help="Start Camera.", chain=True)
+        @kernel.console_command('start', data_type=Camera, help="Start Camera.", chain=True)
         def start_camera(command, channel, _, data=None, args=tuple(), **kwargs):
             data.open_camera()
             return data
 
-        @console_command(kernel, 'stop', data_type=Camera, help="Stop Camera", chain=True)
+        @kernel.console_command('stop', data_type=Camera, help="Stop Camera", chain=True)
         def stop_camera(command, channel, _, data=None, args=tuple(), **kwargs):
             data.close_camera()
             return data
 
-        @console_argument("subcommand", type=str)
-        @console_command(kernel, 'fisheye', data_type=Camera, help="fisheye (capture|reset)", chain=True)
+        @kernel.console_argument("subcommand", type=str)
+        @kernel.console_command('fisheye', data_type=Camera, help="fisheye (capture|reset)", chain=True)
         def fisheye_camera(command, channel, _, data=None, subcommand=None, args=tuple(), **kwargs):
             if subcommand is None:
                 raise SyntaxError
@@ -71,11 +71,11 @@ class CameraHub(Modifier):
                 data.reset_fisheye()
             return data
 
-        @console_argument("subcommand", type=str)
-        @console_argument("corner", type=int)
-        @console_argument("x", type=float)
-        @console_argument("y", type=float)
-        @console_command(kernel, 'perspective', data_type=Camera, help="perspective (set <#> <value>|reset)", chain=True)
+        @kernel.console_argument("subcommand", type=str)
+        @kernel.console_argument("corner", type=int)
+        @kernel.console_argument("x", type=float)
+        @kernel.console_argument("y", type=float)
+        @kernel.console_command('perspective', data_type=Camera, help="perspective (set <#> <value>|reset)", chain=True)
         def perspective_camera(command, channel, _, data=None, subcommand=None, corner=None, x=None, y=None,
                                args=tuple(), **kwargs):
             if subcommand is None:
@@ -91,11 +91,11 @@ class CameraHub(Modifier):
             else:
                 raise SyntaxError
 
-        @console_command(kernel, 'background', data_type=Camera, help="set background image")
+        @kernel.console_command('background', data_type=Camera, help="set background image")
         def background_camera(command, channel, _, data=None, args=tuple(), **kwargs):
             data.background()
 
-        @console_command(kernel, 'export', data_type=Camera, help="export camera image")
+        @kernel.console_command('export', data_type=Camera, help="export camera image")
         def export_camera(command, channel, _, data=None, args=tuple(), **kwargs):
             data.export()
 

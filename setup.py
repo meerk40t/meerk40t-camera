@@ -1,6 +1,6 @@
 from setuptools import setup
 setup(
     install_requires=[
-        "meerk40t>=0.7.0-post2",
+        "meerk40t>=0.7.0-post4",
     ],
 )
