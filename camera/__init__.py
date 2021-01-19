@@ -1,1 +1,1 @@
-name = "meerk40t"
+name = "camera"

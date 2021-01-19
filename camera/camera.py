@@ -255,7 +255,8 @@ class Camera(Modifier):
         :return:
         """
         if self.uri is not None:
-            self.context.threaded(self.threaded_image_fetcher, thread_name="CameraFetcher-%s" % self.context._path)
+            self.context.threaded(self.threaded_image_fetcher,
+                                  thread_name="CameraFetcher-%s-%s" % (self.context._path, self.uri))
 
     def close_camera(self):
         """
