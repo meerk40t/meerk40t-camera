@@ -177,6 +177,7 @@ class Camera(Modifier):
         self.frame_attempts = 0
         self.frame_index = 0
         self.quit_thread = False
+        self.camera_thread = None
 
     def __repr__(self):
         return "Camera()"
@@ -313,7 +314,11 @@ class Camera(Modifier):
         :return:
         """
         if self.uri is not None:
-            self.context.threaded(
+            t = self.camera_thread
+            if t is not None:
+                self.quit_thread = True  # Inform previous thread it must die, if it doesn't already know.
+                t.join()  # Join previous thread, before starting new thread.
+            self.camera_thread = self.context.threaded(
                 self.threaded_image_fetcher,
                 thread_name="CameraFetcher-%s-%s" % (self.context._path, self.uri),
             )
