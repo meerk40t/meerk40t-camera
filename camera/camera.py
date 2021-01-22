@@ -8,9 +8,9 @@ from meerk40t.kernel import Modifier
 
 
 def plugin(kernel):
-    kernel.register('modifier/CameraHub', CameraHub)
-    camera_root = kernel.get_context('camera')
-    camera_root.activate('modifier/CameraHub')
+    kernel.register("modifier/CameraHub", CameraHub)
+    camera_root = kernel.get_context("camera")
+    camera_root.activate("modifier/CameraHub")
 
 
 CORNER_SIZE = 25
@@ -33,71 +33,114 @@ class CameraHub(Modifier):
 
     @staticmethod
     def sub_register(device):
-        device.register('modifier/Camera', Camera)
+        device.register("modifier/Camera", Camera)
 
     def attach(self, *a, **kwargs):
         kernel = self.context._kernel
         _ = kernel.translation
 
-        @kernel.console_option('uri', 'u', type=str)
-        @kernel.console_command('camera\d*', regex=True, help="camera commands and modifiers.", chain=True)
+        @kernel.console_option("uri", "u", type=str)
+        @kernel.console_command(
+            "camera\d*",
+            regex=True,
+            help="camera commands and modifiers.",
+            output_type="camera",
+        )
         def camera(command, channel, _, uri=None, args=tuple(), **kwargs):
             if len(command) > 6:
                 self.current_camera = command[6:]
             camera_context = self.context.derive(self.current_camera)
-            cam = camera_context.activate('modifier/Camera')
+            cam = camera_context.activate("modifier/Camera")
             if uri is not None:
                 cam.set_uri(uri)
-            return cam
+            return "camera", cam
 
-        @kernel.console_command('start', data_type=Camera, help="Start Camera.", chain=True)
+        @kernel.console_command(
+            "start", help="Start Camera.", input_type="camera", output_type="camera"
+        )
         def start_camera(command, channel, _, data=None, args=tuple(), **kwargs):
             data.open_camera()
-            return data
+            return "camera", data
 
-        @kernel.console_command('stop', data_type=Camera, help="Stop Camera", chain=True)
+        @kernel.console_command(
+            "stop", help="Stop Camera", input_type="camera", output_type="camera"
+        )
         def stop_camera(command, channel, _, data=None, args=tuple(), **kwargs):
             data.close_camera()
-            return data
+            return "camera", data
 
         @kernel.console_argument("subcommand", type=str)
-        @kernel.console_command('fisheye', data_type=Camera, help="fisheye (capture|reset)", chain=True)
-        def fisheye_camera(command, channel, _, data=None, subcommand=None, args=tuple(), **kwargs):
+        @kernel.console_command(
+            "fisheye",
+            help="fisheye (capture|reset)",
+            input_type="camera",
+            output_type="camera",
+        )
+        def fisheye_camera(
+            command, channel, _, data=None, subcommand=None, args=tuple(), **kwargs
+        ):
             if subcommand is None:
                 raise SyntaxError
-            if subcommand == 'capture':
+            if subcommand == "capture":
                 data.fisheye_capture()
             elif subcommand == "reset":
                 data.reset_fisheye()
-            return data
+            return "camera", data
 
         @kernel.console_argument("subcommand", type=str)
         @kernel.console_argument("corner", type=int)
         @kernel.console_argument("x", type=float)
         @kernel.console_argument("y", type=float)
-        @kernel.console_command('perspective', data_type=Camera, help="perspective (set <#> <value>|reset)", chain=True)
-        def perspective_camera(command, channel, _, data=None, subcommand=None, corner=None, x=None, y=None,
-                               args=tuple(), **kwargs):
+        @kernel.console_command(
+            "perspective",
+            help="perspective (set <#> <value>|reset)",
+            input_type="camera",
+            output_type="camera",
+        )
+        def perspective_camera(
+            command,
+            channel,
+            _,
+            data=None,
+            subcommand=None,
+            corner=None,
+            x=None,
+            y=None,
+            args=tuple(),
+            **kwargs
+        ):
             if subcommand is None:
                 raise SyntaxError
-            if subcommand == 'reset':
+            if subcommand == "reset":
                 data.reset_perspective()
-                return data
-            elif subcommand == 'set':
+                return "camera", data
+            elif subcommand == "set":
                 if y is None:
                     raise SyntaxError
-                data.perspective[corner] = x,y
-                return camera
+                data.perspective[corner] = x, y
+                return "camera", camera
             else:
                 raise SyntaxError
 
-        @kernel.console_command('background', data_type=Camera, help="set background image")
+        @kernel.console_command(
+            "background",
+            help="set background image",
+            input_type="camera",
+            output_type="image-array",
+        )
         def background_camera(command, channel, _, data=None, args=tuple(), **kwargs):
-            data.background()
+            image_array = data.background()
+            return "image-array", image_array
 
-        @kernel.console_command('export', data_type=Camera, help="export camera image")
+        @kernel.console_command(
+            "export",
+            help="export camera image",
+            input_type="camera",
+            output_type="image-array",
+        )
         def export_camera(command, channel, _, data=None, args=tuple(), **kwargs):
-            data.export()
+            image_array = data.export()
+            return "image-array", image_array
 
     def detach(self, *args, **kwargs):
         pass
@@ -139,13 +182,13 @@ class Camera(Modifier):
     def attach(self, *a, **kwargs):
         self.context.setting(int, "bed_width", 310)
         self.context.setting(int, "bed_height", 210)
-        self.context.setting(int, 'fps', 1)
-        self.context.setting(bool, 'correction_fisheye', False)
-        self.context.setting(bool, 'correction_perspective', False)
-        self.context.setting(str, 'fisheye', '')
-        self.context.setting(str, 'perspective', '')
-        self.context.setting(str, 'uri', '0')
-        self.context.setting(int, 'index', 0)
+        self.context.setting(int, "fps", 1)
+        self.context.setting(bool, "correction_fisheye", False)
+        self.context.setting(bool, "correction_perspective", False)
+        self.context.setting(str, "fisheye", "")
+        self.context.setting(str, "perspective", "")
+        self.context.setting(str, "uri", "0")
+        self.context.setting(int, "index", 0)
         # TODO: regex confirm fisheye and perspective.
         if self.context.fisheye is not None and len(self.context.fisheye) != 0:
             self.fisheye_k, self.fisheye_d = eval(self.context.fisheye)
@@ -191,15 +234,26 @@ class Camera(Modifier):
             return
         CHECKERBOARD = (6, 9)
         subpix_criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.1)
-        calibration_flags = cv2.fisheye.CALIB_RECOMPUTE_EXTRINSIC + cv2.fisheye.CALIB_CHECK_COND + cv2.fisheye.CALIB_FIX_SKEW
+        calibration_flags = (
+            cv2.fisheye.CALIB_RECOMPUTE_EXTRINSIC
+            + cv2.fisheye.CALIB_CHECK_COND
+            + cv2.fisheye.CALIB_FIX_SKEW
+        )
         objp = np.zeros((1, CHECKERBOARD[0] * CHECKERBOARD[1], 3), np.float32)
-        objp[0, :, :2] = np.mgrid[0:CHECKERBOARD[0], 0:CHECKERBOARD[1]].T.reshape(-1, 2)
+        objp[0, :, :2] = np.mgrid[0 : CHECKERBOARD[0], 0 : CHECKERBOARD[1]].T.reshape(
+            -1, 2
+        )
 
         img = frame
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         # Find the chess board corners
-        ret, corners = cv2.findChessboardCorners(gray, CHECKERBOARD,
-                                                 cv2.CALIB_CB_ADAPTIVE_THRESH + cv2.CALIB_CB_FAST_CHECK + cv2.CALIB_CB_NORMALIZE_IMAGE)
+        ret, corners = cv2.findChessboardCorners(
+            gray,
+            CHECKERBOARD,
+            cv2.CALIB_CB_ADAPTIVE_THRESH
+            + cv2.CALIB_CB_FAST_CHECK
+            + cv2.CALIB_CB_NORMALIZE_IMAGE,
+        )
         # If found, add object points, image points (after refining them)
 
         if ret:
@@ -207,10 +261,10 @@ class Camera(Modifier):
             cv2.cornerSubPix(gray, corners, (3, 3), (-1, -1), subpix_criteria)
             self.imgpoints.append(corners)
         else:
-            self.context.get_context('/').signal("warning",
-                                                 _("Checkerboard 6x9 pattern not found.",
-                                                   _("Pattern not found."),
-                                                   4))
+            self.context.get_context("/").signal(
+                "warning",
+                _("Checkerboard 6x9 pattern not found.", _("Pattern not found."), 4),
+            )
             return
         N_OK = len(self.objpoints)
         K = np.zeros((3, 3))
@@ -218,31 +272,33 @@ class Camera(Modifier):
         rvecs = [np.zeros((1, 1, 3), dtype=np.float64) for i in range(N_OK)]
         tvecs = [np.zeros((1, 1, 3), dtype=np.float64) for i in range(N_OK)]
         try:
-            rms, a, b, c, d = \
-                cv2.fisheye.calibrate(
-                    self.objpoints,
-                    self.imgpoints,
-                    gray.shape[::-1],
-                    K,
-                    D,
-                    rvecs,
-                    tvecs,
-                    calibration_flags,
-                    (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 1e-6)
-                )
+            rms, a, b, c, d = cv2.fisheye.calibrate(
+                self.objpoints,
+                self.imgpoints,
+                gray.shape[::-1],
+                K,
+                D,
+                rvecs,
+                tvecs,
+                calibration_flags,
+                (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 1e-6),
+            )
         except cv2.error:
             # Ill conditioned matrix for input values.
             self.objpoints = self.objpoints[:-1]  # Deleting the last entry.
             self.imgpoints = self.imgpoints[:-1]
-            self.context.get_context('/').signal("warning",
-                                                 _("Ill-conditioned Matrix. Keep trying."),
-                                                 _("Matrix."),
-                                                 4)
+            self.context.get_context("/").signal(
+                "warning", _("Ill-conditioned Matrix. Keep trying."), _("Matrix."), 4
+            )
             return
-        self.context.get_context('/').signal("warning",
-                                             _("Success. %d images so far." % len(self.objpoints),
-                                             _("Image Captured"),
-                                             4 | 2048))
+        self.context.get_context("/").signal(
+            "warning",
+            _(
+                "Success. %d images so far." % len(self.objpoints),
+                _("Image Captured"),
+                4 | 2048,
+            ),
+        )
         self.context.fisheye = repr([K.tolist(), D.tolist()])
         self.fisheye_k = K.tolist()
         self.fisheye_d = D.tolist()
@@ -255,8 +311,10 @@ class Camera(Modifier):
         :return:
         """
         if self.uri is not None:
-            self.context.threaded(self.threaded_image_fetcher,
-                                  thread_name="CameraFetcher-%s-%s" % (self.context._path, self.uri))
+            self.context.threaded(
+                self.threaded_image_fetcher,
+                thread_name="CameraFetcher-%s-%s" % (self.context._path, self.uri),
+            )
 
     def close_camera(self):
         """
@@ -268,34 +326,46 @@ class Camera(Modifier):
 
     def process_frame(self):
         frame = self.current_raw
-        if self.fisheye_k is not None and \
-                self.fisheye_d is not None and \
-                self.context.correction_fisheye:
+        if (
+            self.fisheye_k is not None
+            and self.fisheye_d is not None
+            and self.context.correction_fisheye
+        ):
             # Unfisheye the drawing
             K = np.array(self.fisheye_k)
             D = np.array(self.fisheye_d)
             DIM = frame.shape[:2][::-1]
-            map1, map2 = cv2.fisheye.initUndistortRectifyMap(K, D, np.eye(3), K, DIM, cv2.CV_16SC2)
-            frame = cv2.remap(frame, map1, map2, interpolation=cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT)
+            map1, map2 = cv2.fisheye.initUndistortRectifyMap(
+                K, D, np.eye(3), K, DIM, cv2.CV_16SC2
+            )
+            frame = cv2.remap(
+                frame,
+                map1,
+                map2,
+                interpolation=cv2.INTER_LINEAR,
+                borderMode=cv2.BORDER_CONSTANT,
+            )
         if self.context.correction_perspective:
             # Perspective the drawing.
             bed_width = self.context.bed_width * 2
             bed_height = self.context.bed_height * 2
             width, height = frame.shape[:2][::-1]
             if self.perspective is None:
-                rect = np.array([
-                    [0, 0],
-                    [width - 1, 0],
-                    [width - 1, height - 1],
-                    [0, height - 1]], dtype="float32")
-            else:
                 rect = np.array(
-                    self.perspective, dtype="float32")
-            dst = np.array([
-                [0, 0],
-                [bed_width - 1, 0],
-                [bed_width - 1, bed_height - 1],
-                [0, bed_height - 1]], dtype="float32")
+                    [[0, 0], [width - 1, 0], [width - 1, height - 1], [0, height - 1]],
+                    dtype="float32",
+                )
+            else:
+                rect = np.array(self.perspective, dtype="float32")
+            dst = np.array(
+                [
+                    [0, 0],
+                    [bed_width - 1, 0],
+                    [bed_width - 1, bed_height - 1],
+                    [0, bed_height - 1],
+                ],
+                dtype="float32",
+            )
             M = cv2.getPerspectiveTransform(rect, dst)
             frame = cv2.warpPerspective(frame, M, (bed_width, bed_height))
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -317,8 +387,10 @@ class Camera(Modifier):
         return True
 
     def threaded_image_fetcher(self):
-        channel = self.context.channel('camera')
-        self.quit_thread = True  # If another thread exists this will let it die gracefully.
+        channel = self.context.channel("camera")
+        self.quit_thread = (
+            True  # If another thread exists this will let it die gracefully.
+        )
         with self.camera_lock:
             self.quit_thread = False
             uri = self.uri
@@ -385,7 +457,7 @@ class Camera(Modifier):
         :return:
         """
         self.perspective = None
-        self.context.perspective = ''
+        self.context.perspective = ""
 
     def reset_fisheye(self):
         """
@@ -396,7 +468,7 @@ class Camera(Modifier):
         """
         self.fisheye_k = None
         self.fisheye_d = None
-        self.context.fisheye = ''
+        self.context.fisheye = ""
 
     def set_uri(self, uri):
         self.uri = uri
@@ -414,9 +486,11 @@ class Camera(Modifier):
         """
         frame = self.last_frame
         if frame is not None:
-            root = self.context.get_context('/')
+            root = self.context.get_context("/")
             self.image_height, self.image_width = frame.shape[:2]
-            root.signal('background', (self.image_width, self.image_height, frame))
+            root.signal("background", (self.image_width, self.image_height, frame))
+            return (self.image_width, self.image_height, frame)
+        return None
 
     def export(self):
         """
@@ -424,6 +498,8 @@ class Camera(Modifier):
         """
         frame = self.last_frame
         if frame is not None:
-            root = self.context.get_context('/')
+            root = self.context.get_context("/")
             self.image_height, self.image_width = frame.shape[:2]
-            root.signal('export-image', (self.image_width, self.image_height, frame))
+            root.signal("export-image", (self.image_width, self.image_height, frame))
+            return (self.image_width, self.image_height, frame)
+        return None

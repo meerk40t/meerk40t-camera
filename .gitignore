@@ -11,6 +11,7 @@ __pycache__/
 build/
 develop-eggs/
 dist/
+old_dist/
 downloads/
 eggs/
 .eggs/
@@ -19,6 +20,7 @@ lib64/
 parts/
 sdist/
 var/
+.idea/
 wheels/
 pip-wheel-metadata/
 share/python-wheels/
@@ -91,12 +93,8 @@ ipython_config.py
 #   install all needed dependencies.
 #Pipfile.lock
 
-# PEP 582; used by e.g. github.com/David-OConnor/pyflow
-__pypackages__/
-
-# Celery stuff
+# celery beat schedule file
 celerybeat-schedule
-celerybeat.pid
 
 # SageMath parsed files
 *.sage.py
@@ -127,3 +125,7 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# Others
+*.bat
+MeerK40t-*.txt
