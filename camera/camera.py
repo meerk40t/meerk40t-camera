@@ -7,10 +7,12 @@ import numpy as np
 from meerk40t.kernel import Modifier
 
 
-def plugin(kernel):
-    kernel.register("modifier/CameraHub", CameraHub)
-    camera_root = kernel.get_context("camera")
-    camera_root.activate("modifier/CameraHub")
+def plugin(kernel, lifecycle=None):
+    if lifecycle == "register":
+        kernel.register("modifier/CameraHub", CameraHub)
+    if lifecycle == "boot":
+        camera_root = kernel.get_context("camera")
+        camera_root.activate("modifier/CameraHub")
 
 
 CORNER_SIZE = 25
