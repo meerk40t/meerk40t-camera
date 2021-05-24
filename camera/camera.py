@@ -57,10 +57,12 @@ class CameraHub(Modifier):
                 cam.set_uri(uri)
             return "camera", cam
 
+        @kernel.console_option("tries", "t", type=int, default=50, help="Attempts to fetch frame")
         @kernel.console_command(
             "start", help="Start Camera.", input_type="camera", output_type="camera"
         )
-        def start_camera(command, channel, _, data=None, args=tuple(), **kwargs):
+        def start_camera(data=None, tries=50, **kwargs):
+            data.max_tries = tries
             data.open_camera()
             return "camera", data
 
@@ -178,6 +180,7 @@ class Camera(Modifier):
         self.frame_index = 0
         self.quit_thread = False
         self.camera_thread = None
+        self.max_tries = 50
 
     def __repr__(self):
         return "Camera()"
@@ -409,7 +412,7 @@ class Camera(Modifier):
             self.capture = cv2.VideoCapture(uri)
             channel("Capture: %s" % str(self.capture))
             while not self.quit_thread:
-                if self.connection_attempts > 50:
+                if self.connection_attempts > self.max_tries:
                     return  # Too many connection attempts.
                 if self.capture is None:
                     return  # No capture the thread dies.
