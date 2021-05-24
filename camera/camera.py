@@ -57,12 +57,19 @@ class CameraHub(Modifier):
                 cam.set_uri(uri)
             return "camera", cam
 
-        @kernel.console_option("tries", "t", type=int, default=50, help="Attempts to fetch frame")
+        @kernel.console_option("tries", "t", type=int, default=50, help="Attempts to recover connection")
+        @kernel.console_option("frame_tries", "f", type=int, default=10, help="Attempts to fetch frame")
         @kernel.console_command(
             "start", help="Start Camera.", input_type="camera", output_type="camera"
         )
-        def start_camera(data=None, tries=50, **kwargs):
-            data.max_tries = tries
+        def start_camera(data=None, tries=None, frame_tries=None, **kwargs):
+            if tries is not None or frame_tries is not None:
+                if tries is None:
+                    tries = frame_tries
+                if frame_tries is None:
+                    frame_tries = tries
+                data.max_tries_connect = tries
+                data.max_tries_frame = frame_tries
             data.open_camera()
             return "camera", data
 
@@ -180,7 +187,8 @@ class Camera(Modifier):
         self.frame_index = 0
         self.quit_thread = False
         self.camera_thread = None
-        self.max_tries = 50
+        self.max_tries_connect = 50
+        self.max_tries_frame = 10
 
     def __repr__(self):
         return "Camera()"
@@ -385,6 +393,7 @@ class Camera(Modifier):
     def _attempt_recovery(self):
         if self.quit_thread:
             return False
+        self.connection_attempts += 1
         if self.capture is not None:
             self.capture.release()
             self.capture = None
@@ -393,7 +402,6 @@ class Camera(Modifier):
         self.capture = cv2.VideoCapture(uri)
         if self.capture is None:
             return False
-        self.connection_attempts += 1
         return True
 
     def threaded_image_fetcher(self):
@@ -412,7 +420,7 @@ class Camera(Modifier):
             self.capture = cv2.VideoCapture(uri)
             channel("Capture: %s" % str(self.capture))
             while not self.quit_thread:
-                if self.connection_attempts > self.max_tries:
+                if self.connection_attempts > self.max_tries_connect:
                     return  # Too many connection attempts.
                 if self.capture is None:
                     return  # No capture the thread dies.
@@ -427,7 +435,7 @@ class Camera(Modifier):
                     else:
                         return
 
-                for i in range(10):
+                for i in range(self.max_tries_frame):
                     channel("Retrieving Frame: %s" % str(uri))
                     ret, frame = self.capture.retrieve()
                     if not ret or frame is None:
