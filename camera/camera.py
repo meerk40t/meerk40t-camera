@@ -437,7 +437,10 @@ class Camera(Modifier):
 
                 for i in range(self.max_tries_frame):
                     channel("Retrieving Frame: %s" % str(uri))
-                    ret, frame = self.capture.retrieve()
+                    try:
+                        ret, frame = self.capture.retrieve()
+                    except cv2.error:
+                        ret, frame = False, None
                     if not ret or frame is None:
                         channel("Failed Retry: %s" % str(uri))
                         time.sleep(0.1)
