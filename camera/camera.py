@@ -48,7 +48,7 @@ class CameraHub(Modifier):
             help="camera commands and modifiers.",
             output_type="camera",
         )
-        def camera(command, channel, _, uri=None, args=tuple(), **kwargs):
+        def camera(command, uri=None, **kwargs):
             if len(command) > 6:
                 self.current_camera = command[6:]
             camera_context = self.context.derive(self.current_camera)
@@ -57,8 +57,12 @@ class CameraHub(Modifier):
                 cam.set_uri(uri)
             return "camera", cam
 
-        @kernel.console_option("tries", "t", type=int, default=10, help="Attempts to recover connection")
-        @kernel.console_option("frame_tries", "f", type=int, default=10, help="Attempts to fetch frame")
+        @kernel.console_option(
+            "tries", "t", type=int, default=10, help="Attempts to recover connection"
+        )
+        @kernel.console_option(
+            "frame_tries", "f", type=int, default=10, help="Attempts to fetch frame"
+        )
         @kernel.console_command(
             "start", help="Start Camera.", input_type="camera", output_type="camera"
         )
@@ -73,20 +77,18 @@ class CameraHub(Modifier):
         @kernel.console_command(
             "stop", help="Stop Camera", input_type="camera", output_type="camera"
         )
-        def stop_camera(command, channel, _, data=None, args=tuple(), **kwargs):
+        def stop_camera(data=None, **kwargs):
             data.close_camera()
             return "camera", data
 
-        @kernel.console_argument("subcommand", type=str)
+        @kernel.console_argument("subcommand", type=str, help="capture/reset")
         @kernel.console_command(
             "fisheye",
-            help="fisheye (capture|reset)",
+            help="fisheye subcommand",
             input_type="camera",
             output_type="camera",
         )
-        def fisheye_camera(
-            command, channel, _, data=None, subcommand=None, args=tuple(), **kwargs
-        ):
+        def fisheye_camera(data=None, subcommand=None, **kwargs):
             if subcommand is None:
                 raise SyntaxError
             if subcommand == "capture":
@@ -95,7 +97,7 @@ class CameraHub(Modifier):
                 data.reset_fisheye()
             return "camera", data
 
-        @kernel.console_argument("subcommand", type=str)
+        @kernel.console_argument("subcommand", type=str, help="reset/set")
         @kernel.console_argument("corner", type=int)
         @kernel.console_argument("x", type=float)
         @kernel.console_argument("y", type=float)
@@ -106,13 +108,7 @@ class CameraHub(Modifier):
             output_type="camera",
         )
         def perspective_camera(
-            _,
-            data=None,
-            subcommand=None,
-            corner=None,
-            x=None,
-            y=None,
-            **kwargs
+            _, data=None, subcommand=None, corner=None, x=None, y=None, **kwargs
         ):
             if subcommand is None:
                 raise SyntaxError
@@ -133,7 +129,7 @@ class CameraHub(Modifier):
             input_type="camera",
             output_type="image-array",
         )
-        def background_camera(command, channel, _, data=None, args=tuple(), **kwargs):
+        def background_camera(data=None, **kwargs):
             image_array = data.background()
             return "image-array", image_array
 
@@ -143,7 +139,7 @@ class CameraHub(Modifier):
             input_type="camera",
             output_type="image-array",
         )
-        def export_camera(command, channel, _, data=None, args=tuple(), **kwargs):
+        def export_camera(data=None, **kwargs):
             image_array = data.export()
             return "image-array", image_array
 
@@ -269,9 +265,11 @@ class Camera(Modifier):
             cv2.cornerSubPix(gray, corners, (3, 3), (-1, -1), subpix_criteria)
             self.imgpoints.append(corners)
         else:
-            self.context.get_context("/").signal(
+            self.context.root.signal(
                 "warning",
-                _("Checkerboard 6x9 pattern not found.", _("Pattern not found."), 4),
+                _("Checkerboard 6x9 pattern not found."),
+                _("Pattern not found."),
+                4,
             )
             return
         N_OK = len(self.objpoints)
@@ -295,11 +293,11 @@ class Camera(Modifier):
             # Ill conditioned matrix for input values.
             self.objpoints = self.objpoints[:-1]  # Deleting the last entry.
             self.imgpoints = self.imgpoints[:-1]
-            self.context.get_context("/").signal(
+            self.context.root.signal(
                 "warning", _("Ill-conditioned Matrix. Keep trying."), _("Matrix."), 4
             )
             return
-        self.context.get_context("/").signal(
+        self.context.root.signal(
             "warning",
             _(
                 "Success. %d images so far." % len(self.objpoints),
@@ -508,7 +506,7 @@ class Camera(Modifier):
         """
         frame = self.last_frame
         if frame is not None:
-            root = self.context.get_context("/")
+            root = self.context.root
             self.image_height, self.image_width = frame.shape[:2]
             root.signal("background", (self.image_width, self.image_height, frame))
             return (self.image_width, self.image_height, frame)
@@ -520,7 +518,7 @@ class Camera(Modifier):
         """
         frame = self.last_frame
         if frame is not None:
-            root = self.context.get_context("/")
+            root = self.context.root
             self.image_height, self.image_width = frame.shape[:2]
             root.signal("export-image", (self.image_width, self.image_height, frame))
             return (self.image_width, self.image_height, frame)
