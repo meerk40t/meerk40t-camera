@@ -299,11 +299,9 @@ class Camera(Modifier):
             return
         self.context.root.signal(
             "warning",
-            _(
-                "Success. %d images so far." % len(self.objpoints),
-                _("Image Captured"),
-                4 | 2048,
-            ),
+            _("Success. %d images so far.") % len(self.objpoints),
+            _("Image Captured"),
+            4 | 2048,
         )
         self.context.fisheye = repr([K.tolist(), D.tolist()])
         self.fisheye_k = K.tolist()
