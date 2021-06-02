@@ -41,6 +41,8 @@ class CameraHub(Modifier):
         kernel = self.context._kernel
         _ = kernel.translation
 
+        @kernel.console_option("contrast", "-c", help="Turn on AutoContrast", type=bool, action="store_true")
+        @kernel.console_option("nocontrast", "-C", help="Turn off AutoContrast", type=bool, action="store_true")
         @kernel.console_option("uri", "u", type=str)
         @kernel.console_command(
             "camera\d*",
@@ -48,11 +50,15 @@ class CameraHub(Modifier):
             help="camera commands and modifiers.",
             output_type="camera",
         )
-        def camera(command, uri=None, **kwargs):
+        def camera(command, uri=None, contrast=None, nocontrast=None, **kwargs):
             if len(command) > 6:
                 self.current_camera = command[6:]
             camera_context = self.context.derive(self.current_camera)
             cam = camera_context.activate("modifier/Camera")
+            if contrast:
+                camera_context.autonormal = True
+            if nocontrast:
+                camera_context.autonormal = False
             if uri is not None:
                 cam.set_uri(uri)
             return "camera", cam
@@ -193,6 +199,8 @@ class Camera(Modifier):
         self.context.setting(str, "perspective", "")
         self.context.setting(str, "uri", "0")
         self.context.setting(int, "index", 0)
+        self.context.setting(bool, "autonormal", False)
+
         # TODO: regex confirm fisheye and perspective.
         if self.context.fisheye is not None and len(self.context.fisheye) != 0:
             self.fisheye_k, self.fisheye_d = eval(self.context.fisheye)
@@ -379,6 +387,8 @@ class Camera(Modifier):
             M = cv2.getPerspectiveTransform(rect, dst)
             frame = cv2.warpPerspective(frame, M, (bed_width, bed_height))
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        if self.context.autonormal:
+            cv2.normalize(frame, frame, 0, 255, cv2.NORM_MINMAX)
         self.last_frame = self.current_frame
         self.current_frame = frame
 
