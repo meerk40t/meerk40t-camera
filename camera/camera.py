@@ -41,8 +41,14 @@ class CameraHub(Modifier):
         kernel = self.context._kernel
         _ = kernel.translation
 
-        @kernel.console_option("contrast", "-c", help="Turn on AutoContrast", type=bool, action="store_true")
-        @kernel.console_option("nocontrast", "-C", help="Turn off AutoContrast", type=bool, action="store_true")
+        @kernel.console_option(
+            "width", "w", type=int, help="force the camera width"
+        )
+        @kernel.console_option(
+            "height", "h", type=int, help="force the camera height"
+        )
+        @kernel.console_option("contrast", "c", help="Turn on AutoContrast", type=bool, action="store_true")
+        @kernel.console_option("nocontrast", "C", help="Turn off AutoContrast", type=bool, action="store_true")
         @kernel.console_option("uri", "u", type=str)
         @kernel.console_command(
             "camera\d*",
@@ -50,7 +56,7 @@ class CameraHub(Modifier):
             help="camera commands and modifiers.",
             output_type="camera",
         )
-        def camera(command, uri=None, contrast=None, nocontrast=None, **kwargs):
+        def camera(command, uri=None, width=None, height=None, contrast=None, nocontrast=None, **kwargs):
             if len(command) > 6:
                 self.current_camera = command[6:]
             camera_context = self.context.derive(self.current_camera)
@@ -59,6 +65,10 @@ class CameraHub(Modifier):
                 camera_context.autonormal = True
             if nocontrast:
                 camera_context.autonormal = False
+            if width:
+                camera_context.width = width
+            if height:
+                camera_context.height = height
             if uri is not None:
                 cam.set_uri(uri)
             return "camera", cam
@@ -190,8 +200,8 @@ class Camera(Modifier):
         return "Camera()"
 
     def attach(self, *a, **kwargs):
-        self.context.setting(int, "bed_width", 310)
-        self.context.setting(int, "bed_height", 210)
+        self.context.setting(int, "width", 640)
+        self.context.setting(int, "height", 480)
         self.context.setting(int, "fps", 1)
         self.context.setting(bool, "correction_fisheye", False)
         self.context.setting(bool, "correction_perspective", False)
@@ -299,8 +309,7 @@ class Camera(Modifier):
             )
         except cv2.error:
             # Ill conditioned matrix for input values.
-            self.objpoints = self.objpoints[:-1]  # Deleting the last entry.
-            self.imgpoints = self.imgpoints[:-1]
+            self.backtrack_fisheye()
             self.context.root.signal(
                 "warning", _("Ill-conditioned Matrix. Keep trying."), _("Matrix."), 4
             )
@@ -365,8 +374,8 @@ class Camera(Modifier):
             )
         if self.context.correction_perspective:
             # Perspective the drawing.
-            bed_width = self.context.bed_width * 2
-            bed_height = self.context.bed_height * 2
+            dest_width = self.context.width
+            dest_height = self.context.height
             width, height = frame.shape[:2][::-1]
             if self.perspective is None:
                 rect = np.array(
@@ -378,14 +387,14 @@ class Camera(Modifier):
             dst = np.array(
                 [
                     [0, 0],
-                    [bed_width - 1, 0],
-                    [bed_width - 1, bed_height - 1],
-                    [0, bed_height - 1],
+                    [dest_width - 1, 0],
+                    [dest_width - 1, dest_height - 1],
+                    [0, dest_height - 1],
                 ],
                 dtype="float32",
             )
             M = cv2.getPerspectiveTransform(rect, dst)
-            frame = cv2.warpPerspective(frame, M, (bed_width, bed_height))
+            frame = cv2.warpPerspective(frame, M, (dest_width, dest_height))
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         if self.context.autonormal:
             cv2.normalize(frame, frame, 0, 255, cv2.NORM_MINMAX)
@@ -487,6 +496,11 @@ class Camera(Modifier):
         self.perspective = None
         self.context.perspective = ""
 
+    def backtrack_fisheye(self):
+        if self.objpoints:
+            del self.objpoints[-1]
+            del self.imgpoints[-1]
+
     def reset_fisheye(self):
         """
         Reset the fisheye settings.
@@ -496,6 +510,8 @@ class Camera(Modifier):
         """
         self.fisheye_k = None
         self.fisheye_d = None
+        self.objpoints = []
+        self.imgpoints = []
         self.context.fisheye = ""
 
     def set_uri(self, uri):
