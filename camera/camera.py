@@ -111,6 +111,8 @@ class CameraHub(Modifier):
                 data.fisheye_capture()
             elif subcommand == "reset":
                 data.reset_fisheye()
+            elif subcommand == "back":
+                data.backtrack_fisheye()
             return "camera", data
 
         @kernel.console_argument("subcommand", type=str, help="reset/set")
