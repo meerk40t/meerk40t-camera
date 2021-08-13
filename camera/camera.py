@@ -180,13 +180,10 @@ class CameraHub(Modifier):
                     if getattr(cv2, name) == setting:
                         prop = name
                         break
-            channel(_("Setting camera setting (%s) to %f") % (prop, value))
+            v0 = data.capture.get(setting)
             data.capture.set(setting, value)
-            v = data.capture.get(setting)
-            if v == value:
-                channel(_("Setting set on camera."))
-            else:
-                channel(_("Setting was not set for camera."))
+            v1 = data.capture.get(setting)
+            channel(_("Attempt camera setting (%s) to %f. %f->%f") % (prop, value, v0, v1))
 
         @kernel.console_command(
             "list", help="list camera settings", input_type="camera"
@@ -486,43 +483,43 @@ class Camera(Modifier):
             self.context.signal("camera_state", 1)
             self.capture = cv2.VideoCapture(uri)
             channel("Capture: %s" % str(self.capture))
-            if self.capture is None:
-                return  # No capture the thread dies.
-            else:
-                self.context.setting(int, "cam_fps", None)
-                if self.context.cam_fps is not None:
-                    self.capture.set(cv2.CAP_PROP_FPS, self.context.cam_fps)
-                self.context.setting(int, "width", None)
-                if self.context.width is not None:
-                    self.capture.set(cv2.CAP_PROP_FRAME_WIDTH, self.context.width)
-                self.context.setting(int, "height", None)
-                if self.context.height is not None:
-                    self.capture.set(cv2.CAP_PROP_FRAME_HEIGHT, self.context.height)
-                self.context.setting(float, "brightness", None)
-                if self.context.brightness is not None:
-                    self.capture.set(cv2.CAP_PROP_BRIGHTNESS, self.context.brightness)
-                self.context.setting(float, "contrast", None)
-                if self.context.contrast is not None:
-                    self.capture.set(cv2.CAP_PROP_CONTRAST, self.context.contrast)
-                self.context.setting(float, "saturation", None)
-                if self.context.saturation is not None:
-                    self.capture.set(cv2.CAP_PROP_SATURATION, self.context.saturation)
-                self.context.setting(float, "hue", None)
-                if self.context.hue is not None:
-                    self.capture.set(cv2.CAP_PROP_HUE, self.context.hue)
-                self.context.setting(int, "gain", None)
-                if self.context.gain is not None:
-                    self.capture.set(cv2.CAP_PROP_GAIN, self.context.gain)
-                self.context.setting(int, "exposure", None)
-                if self.context.exposure is not None:
-                    self.capture.set(cv2.CAP_PROP_EXPOSURE, self.context.exposure)
-
-                self.context.setting(bool, "convert_rgb", None)
-                if self.context.convert_rgb:
-                    self.capture.set(cv2.CAP_PROP_CONVERT_RGB, self.context.convert_rgb)
-                self.context.setting(int, "rectification", None)
-                if self.context.rectification:
-                    self.capture.set(cv2.CAP_PROP_RECTIFICATION, self.context.rectification)
+            # if self.capture is None:
+            #     return  # No capture the thread dies.
+            # else:
+            #     self.context.setting(int, "cam_fps", None)
+            #     if self.context.cam_fps is not None:
+            #         self.capture.set(cv2.CAP_PROP_FPS, self.context.cam_fps)
+            #     self.context.setting(int, "width", None)
+            #     if self.context.width is not None:
+            #         self.capture.set(cv2.CAP_PROP_FRAME_WIDTH, self.context.width)
+            #     self.context.setting(int, "height", None)
+            #     if self.context.height is not None:
+            #         self.capture.set(cv2.CAP_PROP_FRAME_HEIGHT, self.context.height)
+            #     self.context.setting(float, "brightness", None)
+            #     if self.context.brightness is not None:
+            #         self.capture.set(cv2.CAP_PROP_BRIGHTNESS, self.context.brightness)
+            #     self.context.setting(float, "contrast", None)
+            #     if self.context.contrast is not None:
+            #         self.capture.set(cv2.CAP_PROP_CONTRAST, self.context.contrast)
+            #     self.context.setting(float, "saturation", None)
+            #     if self.context.saturation is not None:
+            #         self.capture.set(cv2.CAP_PROP_SATURATION, self.context.saturation)
+            #     self.context.setting(float, "hue", None)
+            #     if self.context.hue is not None:
+            #         self.capture.set(cv2.CAP_PROP_HUE, self.context.hue)
+            #     self.context.setting(int, "gain", None)
+            #     if self.context.gain is not None:
+            #         self.capture.set(cv2.CAP_PROP_GAIN, self.context.gain)
+            #     self.context.setting(int, "exposure", None)
+            #     if self.context.exposure is not None:
+            #         self.capture.set(cv2.CAP_PROP_EXPOSURE, self.context.exposure)
+            #
+            #     self.context.setting(bool, "convert_rgb", None)
+            #     if self.context.convert_rgb:
+            #         self.capture.set(cv2.CAP_PROP_CONVERT_RGB, self.context.convert_rgb)
+            #     self.context.setting(int, "rectification", None)
+            #     if self.context.rectification:
+            #         self.capture.set(cv2.CAP_PROP_RECTIFICATION, self.context.rectification)
 
             while not self.quit_thread:
                 if self.connection_attempts > self.max_tries_connect:
