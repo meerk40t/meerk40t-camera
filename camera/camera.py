@@ -161,6 +161,56 @@ class CameraHub(Modifier):
             image_array = data.export()
             return "image-array", image_array
 
+        @kernel.console_argument("setting", type=int)
+        @kernel.console_argument("value", type=float)
+        @kernel.console_command(
+            "set", help="set a particular setting in the camera", input_type="camera"
+        )
+        def set_camera(command, _, channel, data=None, setting=None, value=None, **kwargs):
+            if value is None:
+                raise SyntaxError
+            if data.capture is None:
+                channel(_("Camera is not currently running..."))
+                return
+            prop = None
+            for i in range(100):
+                for name in dir(cv2):
+                    if not name.startswith("CAP_PROP"):
+                        continue
+                    if getattr(cv2, name) == setting:
+                        prop = name
+                        break
+            channel(_("Setting camera setting (%s) to %f") % (prop, value))
+            data.capture.set(setting, value)
+            v = data.capture.get(setting)
+            if v == value:
+                channel(_("Setting set on camera."))
+            else:
+                channel(_("Setting was not set for camera."))
+
+        @kernel.console_command(
+            "list", help="list camera settings", input_type="camera"
+        )
+        def set_camera(command, _, channel, data=None, **kwargs):
+            if data.capture is None:
+                channel(_("Camera is not currently running..."))
+                return
+            for i in range(100):
+                try:
+                    v = data.capture.get(i)
+                    prop = None
+                    for name in dir(cv2):
+                        if not name.startswith("CAP_PROP"):
+                            continue
+                        if getattr(cv2, name) == i:
+                            prop = name
+                            break
+                    if prop is None:
+                        continue
+                    channel("%d: %s -- %s" % (i, str(prop), str(v)))
+                except:
+                    pass
+
     def detach(self, *args, **kwargs):
         pass
 
@@ -247,7 +297,7 @@ class Camera(Modifier):
         """
         Raw Camera frame was requested and should be processed.
 
-        This attempts to perform checkboard detection.
+        This attempts to perform checkerboard detection.
 
         :param frame:
         :return:
@@ -436,6 +486,44 @@ class Camera(Modifier):
             self.context.signal("camera_state", 1)
             self.capture = cv2.VideoCapture(uri)
             channel("Capture: %s" % str(self.capture))
+            if self.capture is None:
+                return  # No capture the thread dies.
+            else:
+                self.context.setting(int, "cam_fps", None)
+                if self.context.cam_fps is not None:
+                    self.capture.set(cv2.CAP_PROP_FPS, self.context.cam_fps)
+                self.context.setting(int, "width", None)
+                if self.context.width is not None:
+                    self.capture.set(cv2.CAP_PROP_FRAME_WIDTH, self.context.width)
+                self.context.setting(int, "height", None)
+                if self.context.height is not None:
+                    self.capture.set(cv2.CAP_PROP_FRAME_HEIGHT, self.context.height)
+                self.context.setting(float, "brightness", None)
+                if self.context.brightness is not None:
+                    self.capture.set(cv2.CAP_PROP_BRIGHTNESS, self.context.brightness)
+                self.context.setting(float, "contrast", None)
+                if self.context.contrast is not None:
+                    self.capture.set(cv2.CAP_PROP_CONTRAST, self.context.contrast)
+                self.context.setting(float, "saturation", None)
+                if self.context.saturation is not None:
+                    self.capture.set(cv2.CAP_PROP_SATURATION, self.context.saturation)
+                self.context.setting(float, "hue", None)
+                if self.context.hue is not None:
+                    self.capture.set(cv2.CAP_PROP_HUE, self.context.hue)
+                self.context.setting(int, "gain", None)
+                if self.context.gain is not None:
+                    self.capture.set(cv2.CAP_PROP_GAIN, self.context.gain)
+                self.context.setting(int, "exposure", None)
+                if self.context.exposure is not None:
+                    self.capture.set(cv2.CAP_PROP_EXPOSURE, self.context.exposure)
+
+                self.context.setting(bool, "convert_rgb", None)
+                if self.context.convert_rgb:
+                    self.capture.set(cv2.CAP_PROP_CONVERT_RGB, self.context.convert_rgb)
+                self.context.setting(int, "rectification", None)
+                if self.context.rectification:
+                    self.capture.set(cv2.CAP_PROP_RECTIFICATION, self.context.rectification)
+
             while not self.quit_thread:
                 if self.connection_attempts > self.max_tries_connect:
                     return  # Too many connection attempts.
