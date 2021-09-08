@@ -1,4 +1,4 @@
-# meerk40t-example
+# meerk40t-camera
 MeerK40t camera plugin. If you have meerk40t installed you can install the camera plugin. This gives the user access to cameras through the opencv module in Python. This plugin's job is to mediate the interactions between MeerK40t and OpenCV.
 
 # Installing
