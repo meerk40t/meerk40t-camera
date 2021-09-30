@@ -5,6 +5,5 @@ setup(
     ],
     extras_require={
         'cv': ["opencv-python-headless>=3.4.0.0"],
-        'cvhead': ["opencv-python>=3.4.0.0"],
     }
 )
