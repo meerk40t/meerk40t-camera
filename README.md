@@ -9,18 +9,27 @@ Since the plugin's value depends on interactions through the plugin api for Meer
 
 * `$ pip install meerk40t-camera[cv]`
 
-This installs opencv-python-headless with the camera.
+This installs the meerk40t-camera and  opencv-python-headless. 
+The headless version of opencv provides all the functionality Meerk40t needs, 
+so unless you are using opencv with other software that requires X11 
+this is the package recommended to you to install.  
 
-or:
-
-* `$ pip install meerk40t-camera[cvhead]`
-
-This installs opencv-python with the camera.
-
-If you already have one of the two flavors of opencv installed then you can do:
+If you have a non-Meerk40t requirement for the additional functionality in one of the following opencv packages, 
+then you can install the opencv-python package of your choice separately and install meerk40t camera
+using the following:
 
 * `$ pip install meerk40t-camera`
 
+If you are installing opencv-python yourself then you can do so using one of the following commands: 
+
+* `$ pip install opencv-python`
+* `$ pip install opencv-python-headless`
+* `$ pip install opencv-contrib-python`
+* `$ pip install opencv-contrib-python-headless`
+
+**Note:** Only one opencv-python package should be installed at any one time. 
+If you have installed multiple versions, then you need to uninstall **all** of them
+and reinstall the one you want.
 
 ## Directly
 
