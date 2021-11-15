@@ -181,7 +181,11 @@ class CameraHub(Modifier):
                         prop = name
                         break
             v0 = data.capture.get(setting)
-            data.capture.set(setting, value)
+            try:
+                data.capture.set(setting, value)
+            except cv2.error:
+                channel(_("Attempt to change setting failed, raised cv2 error."))
+                return
             v1 = data.capture.get(setting)
             channel(_("Attempt camera setting (%s) to %f. %f->%f") % (prop, value, v0, v1))
 
